@@ -728,6 +728,12 @@
           <option value="">Все типы</option>
         </select>
       </div>
+      <div>
+        <div class="filter-label">Класс</div>
+        <select class="select-filter" id="filter-klass" onchange="applyFilters()">
+          <option value="">Все классы</option>
+        </select>
+      </div>
     </div>
 
     <!-- MOBILE TOGGLE -->
@@ -995,7 +1001,15 @@ function getStatusBadge(status) {
 
 function buildPopup(d) {
   const color = getPartnerColor(d.partner);
-  const priceStr = d.price ? `<div class="popup-row"><strong>Цена от:</strong> ${d.price} млн руб/сот</div>` : '';
+  // Цены — показываем что есть
+  const t = (d.type || '').toLowerCase();
+  const hasLand = t.includes('участк') || t.includes('дом и') || t.includes('дома и');
+  const hasHouse = t.includes('дом') || t.includes('коттедж') || t.includes('таунхаус') || t.includes('квартир');
+  let priceStr = '';
+  if (d.price_land && hasLand) priceStr += `<div class="popup-row"><strong>Участок от:</strong> ${d.price_land} млн руб</div>`;
+  if (d.price_house && hasHouse) priceStr += `<div class="popup-row"><strong>Дом/ТХ от:</strong> ${d.price_house} млн руб</div>`;
+  // Класс
+  const klassStr = d.klass ? `<div class="popup-row"><strong>Класс:</strong> ${d.klass}</div>` : '';
   const kmStr = d.km ? `<div class="popup-row"><strong>От МКАД:</strong> ${d.km} км · ${d.highway || '—'}</div>` : '';
   const linkHtml = d.site ? `<a href="${d.site}" target="_blank" class="popup-link">Открыть сайт ↗</a>` : '';
 
@@ -1025,7 +1039,8 @@ function buildPopup(d) {
           ${kmStr}
           ${priceStr}
           ${d.type ? `<div class="popup-row"><strong>Тип:</strong> ${d.type}</div>` : ''}
-          ${d.notes ? `<div class="popup-row"><strong>Заметка:</strong> ${d.notes}</div>` : ''}
+          ${klassStr}
+        ${d.notes ? `<div class="popup-row"><strong>Заметка:</strong> ${d.notes}</div>` : ''}
         </div>
         ${linkHtml}
       </div>
@@ -1144,6 +1159,7 @@ function resetFilters() {
   document.getElementById('filter-direction').value = '';
   document.getElementById('filter-status').value = '';
   document.getElementById('filter-type').value = '';
+  if (document.getElementById('filter-klass')) document.getElementById('filter-klass').value = '';
   // Включаем всех партнёров
   document.querySelectorAll('.legend-item').forEach(el => {
     const partner = el.dataset.partner;
@@ -1163,6 +1179,7 @@ function applyFilters() {
   const direction = document.getElementById('filter-direction').value;
   const status = document.getElementById('filter-status').value;
   const typeFilter = document.getElementById('filter-type').value;
+  const klassFilter = document.getElementById('filter-klass') ? document.getElementById('filter-klass').value : '';
 
   filteredData = allData.filter(d => {
     if (!activePartners.has(d.partner)) return false;
@@ -1177,6 +1194,7 @@ function applyFilters() {
         (typeFilter === 'таунхаус' && (t.includes('таунхаус') || t.includes('квартир')));
       if (!match) return false;
     }
+    if (klassFilter && d.klass !== klassFilter) return false;
     return true;
   });
 
@@ -1212,6 +1230,21 @@ function updateFilterOptions() {
   const statuses = [...new Set(allData.map(d => d.status).filter(Boolean))].sort();
   stSelect.innerHTML = '<option value="">Все статусы</option>' +
     statuses.map(s => `<option ${s===curSt?'selected':''}>${s}</option>`).join('');
+
+  // Класс — динамически из данных
+  const klassSelect = document.getElementById('filter-klass');
+  if (klassSelect) {
+    const curKlass = klassSelect.value;
+    const klasses = [...new Set(allData.map(d => d.klass).filter(Boolean))];
+    // Сортируем по порядку
+    const klassOrder = ['Эконом', 'Комфорт', 'Бизнес', 'Премиум'];
+    klasses.sort((a, b) => {
+      const ai = klassOrder.indexOf(a); const bi = klassOrder.indexOf(b);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+    klassSelect.innerHTML = '<option value="">Все классы</option>' +
+      klasses.map(k => `<option ${k===curKlass?'selected':''}>${k}</option>`).join('');
+  }
 
   // Типы — умная группировка, показываем только те группы у которых есть данные
   const typeSelect = document.getElementById('filter-type');
@@ -1374,7 +1407,9 @@ function parseJSON(rows) {
     'долгота': 'lon',
     'статус': 'status',
     'тип': 'type',
-    'цена от (млн руб)': 'price',
+    'цена зу (млн)': 'price_land',
+    'цена дома (млн)': 'price_house',
+    'класс': 'klass',
     'сайт': 'site',
     'заметки': 'notes',
     'фото': 'photo',
@@ -1411,7 +1446,9 @@ function parseCSV(text) {
     'долгота': 'lon',
     'статус': 'status',
     'тип': 'type',
-    'цена от (млн руб)': 'price',
+    'цена зу (млн)': 'price_land',
+    'цена дома (млн)': 'price_house',
+    'класс': 'klass',
     'сайт': 'site',
     'заметки': 'notes',
     'фото': 'photo',
