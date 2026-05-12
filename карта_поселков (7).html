@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Карта поселков — АН Простор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Unbounded:wght@300;400;600&family=Golos+Text:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #151820;
+    --surface2: #1e2230;
+    --border: #2a2f40;
+    --accent: #e8c547;
+    --accent2: #3b82f6;
+    --text: #e8eaf0;
+    --text-muted: #7a8099;
+    --your: #e8c547;
+    --istra: #3b82f6;
+    --zemlya: #22c55e;
+    --realt: #f97316;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Golos Text', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    height: 56px;
+    flex-shrink: 0;
+    z-index: 1000;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .logo span { color: var(--text-muted); font-size: 13px; letter-spacing: 0; font-family: 'Golos Text', sans-serif; margin-left: 8px; }
+
+  .header-divider { width: 1px; height: 28px; background: var(--border); }
+
+  .counter {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 11px;
+    font-weight: 300;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .counter strong { color: var(--accent); font-weight: 600; font-size: 16px; margin-right: 4px; }
+
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+  .sync-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: 'Golos Text', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .sync-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sync-btn svg { width: 14px; height: 14px; }
+
+  .sheets-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 4px 4px 12px;
+    transition: border-color 0.2s;
+  }
+  .sheets-input-wrap:focus-within { border-color: var(--accent2); }
+
+  .sheets-input-wrap input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 13px;
+    width: 260px;
+  }
+
+  .sheets-input-wrap input::placeholder { color: var(--text-muted); }
+
+  .btn-load {
+    background: var(--accent2);
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-family: 'Golos Text', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+  .btn-load:hover { opacity: 0.85; }
+
+  /* MAIN */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 300px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .filters {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-label {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px 8px 34px;
+    color: var(--text);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    width: 15px;
+    height: 15px;
+  }
+
+  .select-filter {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .select-filter:focus { border-color: var(--accent); }
+
+  /* LEGEND */
+  .legend {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 3px 8px 3px 5px;
+    border-radius: 4px;
+    transition: background 0.15s;
+    user-select: none;
+  }
+
+  .legend-item:hover { background: var(--surface2); }
+  .legend-item.active { color: var(--text); }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* LIST */
+  .list-header {
+    padding: 12px 16px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .list-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .list-count {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+  }
+
+  .list::-webkit-scrollbar { width: 4px; }
+  .list::-webkit-scrollbar-track { background: transparent; }
+  .list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .list-item {
+    padding: 10px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border-left: 2px solid transparent;
+    margin-bottom: 2px;
+  }
+
+  .list-item:hover { background: var(--surface2); }
+  .list-item.active { background: var(--surface2); border-left-color: var(--accent); }
+
+  .item-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .item-body { flex: 1; min-width: 0; }
+
+  .item-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+
+  .item-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .item-tag {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+
+  /* MAP */
+  #map {
+    flex: 1;
+    background: var(--bg);
+    height: 100%;
+    width: 100%;
+  }
+
+  /* POPUP */
+  .leaflet-popup-content-wrapper {
+    background: var(--surface2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+    color: var(--text) !important;
+    font-family: 'Golos Text', sans-serif !important;
+    padding: 0 !important;
+    min-width: 240px;
+  }
+
+  .leaflet-popup-tip { background: var(--surface2) !important; }
+  .leaflet-popup-close-button { color: var(--text-muted) !important; font-size: 16px !important; padding: 8px 10px !important; }
+  .leaflet-popup-close-button:hover { color: var(--text) !important; }
+
+  .popup-inner { padding: 16px; }
+
+  .popup-partner {
+    font-size: 10px;
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .popup-name {
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+
+  .popup-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .popup-row strong { color: var(--text); min-width: 90px; }
+
+  .popup-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 12px;
+    background: var(--accent);
+    color: #000;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .popup-link:hover { opacity: 0.85; }
+
+  /* STATUS badge */
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 500;
+    margin-top: 8px;
+  }
+
+  .status-sale { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+  .status-start { background: rgba(249,115,22,0.15); color: #f97316; border: 1px solid rgba(249,115,22,0.3); }
+  .status-done { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
+
+  /* COLOR PICKER */
+  .legend-item { position: relative; }
+  .color-picker-wrap {
+    position: absolute;
+    bottom: 28px;
+    left: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    display: none;
+    z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    width: 148px;
+  }
+  .color-picker-wrap.open { display: flex; flex-wrap: wrap; gap: 5px; }
+  .color-swatch {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .color-swatch:hover { transform: scale(1.2); }
+  .color-swatch.selected { border-color: white; }
+  .color-edit-btn {
+    width: 14px; height: 14px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    cursor: pointer;
+    margin-left: 2px;
+    flex-shrink: 0;
+  }
+  .legend-item:hover .color-edit-btn { opacity: 0.6; }
+  .color-edit-btn:hover { opacity: 1 !important; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 9999;
+    transition: transform 0.3s;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: #22c55e; color: #22c55e; }
+  .toast.error { border-color: #ef4444; color: #ef4444; }
+
+  /* LOADING */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(13,15,20,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+  }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Marker cluster числа */
+  .leaflet-div-icon { background: transparent !important; border: none !important; }
+
+  .custom-marker {
+    width: 28px;
+    height: 28px;
+    border-radius: 50% 50% 50% 2px;
+    transform: rotate(-45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+
+  .custom-marker .dot {
+    width: 8px;
+    height: 8px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    transform: rotate(45deg);
+  }
+
+  .info-box {
+    position: absolute;
+    bottom: 24px;
+    right: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    z-index: 500;
+    pointer-events: none;
+  }
+
+  .info-box strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">ПРОСТОР <span>ИЖС / Загородка</span></div>
+  <div class="header-divider"></div>
+  <div class="counter"><strong id="total-count">0</strong> поселков на карте</div>
+
+  <div class="header-right">
+    <!-- Google Sheets URL input -->
+    <div class="sheets-input-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+      <input type="text" id="sheets-url" placeholder="Вставь ссылку на Apps Script или Google Таблицу...">
+      <button class="btn-load" onclick="loadFromSheets()">Загрузить</button>
+    </div>
+
+    <button class="sync-btn" onclick="autoLoadFromScript()" title="Обновить данные">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Синхронизировать
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <!-- FILTERS -->
+    <div class="filters">
+      <div>
+        <div class="filter-label">Поиск</div>
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" id="search" placeholder="Название поселка..." oninput="applyFilters()">
+        </div>
+      </div>
+      <div>
+        <div class="filter-label">Направление</div>
+        <select class="select-filter" id="filter-direction" onchange="applyFilters()">
+          <option value="">Все направления</option>
+          <option>Север</option>
+          <option>Юг</option>
+          <option>Запад</option>
+          <option>Восток</option>
+          <option>Северо-восток</option>
+        </select>
+      </div>
+      <div>
+        <div class="filter-label">Статус</div>
+        <select class="select-filter" id="filter-status" onchange="applyFilters()">
+          <option value="">Все статусы</option>
+          <option>В продаже</option>
+          <option>Старт продаж</option>
+          <option>Завершён</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="legend" id="legend"></div>
+
+    <!-- LIST -->
+    <div class="list-header">
+      <div class="list-title">Поселки</div>
+      <div class="list-count" id="list-count">0</div>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <!-- MAP -->
+  <div style="flex:1; position:relative; height:100%;">
+    <div id="map"></div>
+    <div class="info-box">
+      <strong>Как использовать:</strong><br>
+      1. Вставь ссылку на Google Таблицу<br>
+      2. Нажми «Загрузить»<br>
+      3. Карта обновится автоматически
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  DATA
+// ============================================================
+
+// Базовые цвета для известных партнёров
+const BASE_COLORS = {
+  'Ваш КП':              '#e8c547',
+  'Истринская долина':   '#3b82f6',
+  'Земельный экспресс':  '#22c55e',
+  'Realt.one':           '#f97316',
+};
+
+// Палитра для новых партнёров
+const AUTO_PALETTE = [
+  '#e879f9','#06b6d4','#f43f5e','#84cc16',
+  '#8b5cf6','#14b8a6','#fb923c','#a78bfa',
+  '#34d399','#f472b6','#60a5fa','#facc15',
+];
+
+// Динамический словарь цветов (расширяется автоматически)
+let PARTNER_COLORS = { ...BASE_COLORS };
+let paletteIndex = 0;
+
+// Загружаем сохранённые цвета из localStorage
+function loadSavedColors() {
+  try {
+    const saved = localStorage.getItem('partnerColors');
+    if (saved) PARTNER_COLORS = { ...BASE_COLORS, ...JSON.parse(saved) };
+  } catch(e) {}
+}
+
+function saveColors() {
+  try { localStorage.setItem('partnerColors', JSON.stringify(PARTNER_COLORS)); } catch(e) {}
+}
+
+function getPartnerColor(partner) {
+  if (!PARTNER_COLORS[partner]) {
+    // Назначаем следующий цвет из палитры
+    PARTNER_COLORS[partner] = AUTO_PALETTE[paletteIndex % AUTO_PALETTE.length];
+    paletteIndex++;
+    saveColors();
+  }
+  return PARTNER_COLORS[partner];
+}
+
+const DEFAULT_COLOR = '#7a8099';
+
+// Встроенные данные (работают без таблицы)
+const DEFAULT_DATA = [
+  // ВАШ КП
+  {name:'Пушкино Дом у воды',partner:'Ваш КП',direction:'Север',highway:'Ярославское',km:40,lat:56.054388,lon:38.005518,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Дмитров Дом',partner:'Ваш КП',direction:'Север',highway:'Дмитровское',km:65,lat:56.351339,lon:37.521468,status:'В продаже',type:'Участки',price:'',site:'http://dmitrov-dom.ru/',notes:''},
+  {name:'Истра Дом',partner:'Ваш КП',direction:'Запад',highway:'Истринское',km:45,lat:56.041541,lon:36.863247,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Булатово Резиденс',partner:'Ваш КП',direction:'Юг',highway:'Симферопольское',km:55,lat:55.442539,lon:37.428472,status:'В продаже',type:'Дома',price:'',site:'https://bulatovoresidence.ru/',notes:''},
+  {name:'Рига Фэмили',partner:'Ваш КП',direction:'Запад',highway:'Новорижское',km:55,lat:55.932282,lon:36.55142,status:'В продаже',type:'Дома и участки',price:'',site:'https://riga-family.ru/',notes:''},
+  {name:'Алексино Forest Club',partner:'Ваш КП',direction:'Запад',highway:'Истринское',km:40,lat:55.947499,lon:37.00436,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Riga Life',partner:'Ваш КП',direction:'Запад',highway:'Новорижское',km:35,lat:55.770222,lon:37.101846,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Катуар',partner:'Ваш КП',direction:'Север',highway:'Дмитровское',km:35,lat:56.104252,lon:37.48311,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'ВамДом Петровское',partner:'Ваш КП',direction:'Восток',highway:'Щёлковское',km:50,lat:56.081332,lon:38.243308,status:'В продаже',type:'Дома',price:'',site:'https://wam-dom.ru/',notes:''},
+  {name:'ВамДом Пятница',partner:'Ваш КП',direction:'Запад',highway:'Новорижское',km:40,lat:55.830935,lon:35.891082,status:'В продаже',type:'Дома',price:'',site:'https://wam-dom.ru/',notes:''},
+  {name:'Максимово Парк',partner:'Ваш КП',direction:'Запад',highway:'Истринское',km:40,lat:55.95915,lon:36.863742,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Рижское Лето',partner:'Ваш КП',direction:'Север',highway:'Дмитровское',km:30,lat:56.056159,lon:37.531349,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Рига Холидэй',partner:'Ваш КП',direction:'Запад',highway:'Новорижское',km:35,lat:55.771,lon:37.105,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Сходня Кантри Клаб',partner:'Ваш КП',direction:'Запад',highway:'Ленинградское',km:25,lat:55.925929,lon:37.308886,status:'В продаже',type:'Дома и участки',price:'',site:'https://shodnyacountryclub.ru/',notes:''},
+  {name:'Первый Лесной',partner:'Ваш КП',direction:'Запад',highway:'Истринское',km:40,lat:55.98258,lon:36.906388,status:'В продаже',type:'Участки',price:'',site:'http://ekoland.ru/',notes:''},
+  {name:'Юрьево Берег',partner:'Ваш КП',direction:'Северо-восток',highway:'Пушкинское',km:35,lat:56.049598,lon:37.66283,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Мечта',partner:'Ваш КП',direction:'Север',highway:'Дмитровское',km:40,lat:56.065445,lon:37.374581,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Сысоево Парк',partner:'Ваш КП',direction:'Запад',highway:'Истринское',km:40,lat:55.957681,lon:36.93506,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  // Realt.one
+  {name:'КП Изумрудный',partner:'Realt.one',direction:'Север',highway:'Дмитровское',km:30,lat:56.072967,lon:37.246635,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'КП Форест',partner:'Realt.one',direction:'Север',highway:'Дмитровское',km:35,lat:56.28,lon:37.45,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  {name:'Лагуна Парк',partner:'Realt.one',direction:'Восток',highway:'Щёлковское',km:40,lat:56.058751,lon:38.149797,status:'В продаже',type:'Участки',price:'',site:'',notes:''},
+  // Истринская долина
+  {name:'Сканди Парк',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:45,lat:56.048859,lon:36.671759,status:'В продаже',type:'Дома и участки',price:'0.65',site:'https://istra-dolina.ru/poselki/skandi-park/',notes:''},
+  {name:'Лисичкин бор',partner:'Истринская долина',direction:'Запад',highway:'Истринское',km:40,lat:56.035239,lon:37.149871,status:'В продаже',type:'Участки',price:'0.17',site:'https://istra-dolina.ru/poselki/lisichkin-bor/',notes:''},
+  {name:'Истра Резиденс',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:50,lat:56.135763,lon:36.828166,status:'Старт продаж',type:'Участки',price:'0.3',site:'https://istra-dolina.ru/poselki/istra_rezidence/',notes:''},
+  {name:'Зорино',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:50,lat:56.008106,lon:36.720165,status:'Старт продаж',type:'Участки',price:'0.21',site:'https://istra-dolina.ru/poselki/zorino/',notes:''},
+  {name:'Майские дачи',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:48,lat:56.046645,lon:36.73691,status:'В продаже',type:'Участки',price:'0.22',site:'https://istra-dolina.ru/poselki/mayskie-dachi/',notes:''},
+  {name:'Прибрежные холмы',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:50,lat:56.135945,lon:36.86079,status:'В продаже',type:'Участки',price:'0.14',site:'https://istra-dolina.ru/poselki/2kh2-vtoraya-ochered/',notes:''},
+  {name:'Леоново-2',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:48,lat:56.02,lon:36.78,status:'В продаже',type:'Участки',price:'0.2',site:'https://istra-dolina.ru/poselki/leonovo-2/',notes:''},
+  {name:'Прилесные дачи',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:47,lat:56.04,lon:36.75,status:'В продаже',type:'Участки',price:'0.14',site:'https://istra-dolina.ru/poselki/Prilesnye_dachi/',notes:''},
+  {name:'Куртниково',partner:'Истринская долина',direction:'Запад',highway:'Волоколамское',km:45,lat:55.838716,lon:37.227677,status:'В продаже',type:'Участки',price:'0.2',site:'https://istra-dolina.ru/poselki/kurtnikovo/',notes:''},
+  {name:'Леоново',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:47,lat:56.025,lon:36.78,status:'В продаже',type:'Участки',price:'0.13',site:'https://istra-dolina.ru/poselki/leonovo/',notes:''},
+  {name:'Ушаковские дачи-2',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:48,lat:56.04,lon:36.68,status:'В продаже',type:'Участки',price:'0.21',site:'https://istra-dolina.ru/poselki/ushakovskie-dachi-2/',notes:''},
+  {name:'2x2',partner:'Истринская долина',direction:'Запад',highway:'Новорижское',km:47,lat:56.01,lon:36.73,status:'В продаже',type:'Участки',price:'0.07',site:'https://istra-dolina.ru/poselki/2x2/',notes:''},
+  // Земельный экспресс (выборка ключевых)
+  {name:'РигаЛес',partner:'Земельный экспресс',direction:'Запад',highway:'Новорижское',km:45,lat:55.840882,lon:37.040216,status:'В продаже',type:'Участки',price:'1.8',site:'https://zemexx.ru/zemelnye-uchastki/novorizhskoe-shosse/riga-les/',notes:''},
+  {name:'Каретный ряд',partner:'Земельный экспресс',direction:'Запад',highway:'Новорижское',km:45,lat:55.885856,lon:36.389058,status:'В продаже',type:'Участки',price:'0.95',site:'https://zemexx.ru/zemelnye-uchastki/novorizhskoe-shosse/karetnyy-ryad/',notes:''},
+  {name:'Астра',partner:'Земельный экспресс',direction:'Запад',highway:'Новорижское',km:45,lat:55.87,lon:36.35,status:'Старт продаж',type:'Участки',price:'0.9',site:'https://zemexx.ru/zemelnye-uchastki/novorizhskoe-shosse/astra/',notes:''},
+  {name:'ПриЛесной',partner:'Земельный экспресс',direction:'Север',highway:'Дмитровское',km:27,lat:55.920139,lon:37.546417,status:'В продаже',type:'Участки',price:'1.49',site:'https://zemexx.ru/zemelnye-uchastki/dmitrovskoe-shosse/prilesnoy/',notes:''},
+  {name:'Триумфальный',partner:'Земельный экспресс',direction:'Север',highway:'Дмитровское',km:28,lat:56.123123,lon:37.529463,status:'В продаже',type:'Участки',price:'1.04',site:'https://zemexx.ru/zemelnye-uchastki/dmitrovskoe-shosse/triumfalnyy1/',notes:''},
+  {name:'Лесной остров',partner:'Земельный экспресс',direction:'Юг',highway:'Симферопольское',km:36,lat:55.448696,lon:36.976675,status:'В продаже',type:'Участки',price:'0.66',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/lesnoy-ostrov/',notes:''},
+  {name:'Фаворит',partner:'Земельный экспресс',direction:'Юг',highway:'Каширское',km:30,lat:55.4487,lon:36.977,status:'В продаже',type:'Участки',price:'0.51',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/favorit/',notes:''},
+  {name:'Династия',partner:'Земельный экспресс',direction:'Юг',highway:'Каширское',km:41,lat:55.456957,lon:37.338762,status:'В продаже',type:'Участки',price:'0.34',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/dinastiya/',notes:''},
+  {name:'Грибоедово',partner:'Земельный экспресс',direction:'Юг',highway:'Каширское',km:38,lat:55.43,lon:37.46,status:'В продаже',type:'Участки',price:'0.44',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/griboedovo/',notes:''},
+  {name:'Минаево Парк',partner:'Земельный экспресс',direction:'Юг',highway:'Каширское',km:40,lat:55.266771,lon:37.742154,status:'В продаже',type:'Участки',price:'0.25',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/minaevo-park/',notes:''},
+  {name:'Бунино',partner:'Земельный экспресс',direction:'Юг',highway:'Каширское',km:38,lat:55.539049,lon:37.452148,status:'В продаже',type:'Участки',price:'0.27',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/bunino/',notes:''},
+  {name:'Шишкино Лэнд',partner:'Земельный экспресс',direction:'Юг',highway:'Каширское',km:41,lat:55.272993,lon:37.765904,status:'В продаже',type:'Участки',price:'0.47',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/shishkino-lend/',notes:''},
+  {name:'Суриково',partner:'Земельный экспресс',direction:'Юг',highway:'Каширское',km:43,lat:55.37,lon:37.35,status:'Старт продаж',type:'Участки',price:'0.2',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/surikovo/',notes:''},
+  {name:'Светлый',partner:'Земельный экспресс',direction:'Юг',highway:'Каширское',km:49,lat:55.3,lon:37.2,status:'В продаже',type:'Участки',price:'0.19',site:'https://zemexx.ru/zemelnye-uchastki/kashirskoe-shosse/svetlyy/',notes:''},
+];
+
+// ============================================================
+//  STATE
+// ============================================================
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzXSPtnnnE3999AlSvJGsMND4mnRxPrTImZvNCKkRYI8S4O9ouwP2SEamZdCs37V_2RA/exec';
+let allData = [...DEFAULT_DATA];
+let filteredData = [...allData];
+let markers = {};
+let activePartners = new Set(Object.keys(PARTNER_COLORS));
+let activeListItem = null;
+let map;
+
+// ============================================================
+//  MAP INIT
+// ============================================================
+
+function initMap() {
+  map = L.map('map', {
+    center: [55.85, 37.3],
+    zoom: 9,
+    zoomControl: false,
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(map);
+
+  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+}
+
+// ============================================================
+//  MARKER
+// ============================================================
+
+function createIcon(color) {
+  return L.divIcon({
+    html: `<div class="custom-marker" style="background:${color}"><div class="dot"></div></div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -30],
+  });
+}
+
+function getStatusBadge(status) {
+  if (!status) return '';
+  const map = {
+    'В продаже': 'status-sale',
+    'Старт продаж': 'status-start',
+    'Завершён': 'status-done',
+  };
+  const cls = map[status] || 'status-done';
+  return `<span class="status-badge ${cls}">${status}</span>`;
+}
+
+function buildPopup(d) {
+  const color = getPartnerColor(d.partner);
+  const priceStr = d.price ? `<div class="popup-row"><strong>Цена от:</strong> ${d.price} млн руб/сот</div>` : '';
+  const kmStr = d.km ? `<div class="popup-row"><strong>От МКАД:</strong> ${d.km} км · ${d.highway || '—'}</div>` : '';
+  const linkHtml = d.site ? `<a href="${d.site}" target="_blank" class="popup-link">Открыть сайт ↗</a>` : '';
+
+  return `
+    <div class="popup-inner">
+      <div class="popup-partner" style="color:${color}">${d.partner || ''}</div>
+      <div class="popup-name">${d.name}</div>
+      ${getStatusBadge(d.status)}
+      <div style="margin-top:10px">
+        ${kmStr}
+        ${priceStr}
+        ${d.type ? `<div class="popup-row"><strong>Тип:</strong> ${d.type}</div>` : ''}
+        ${d.notes ? `<div class="popup-row"><strong>Заметка:</strong> ${d.notes}</div>` : ''}
+      </div>
+      ${linkHtml}
+    </div>
+  `;
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+
+function renderMarkers() {
+  // Удаляем старые
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  filteredData.forEach((d, i) => {
+    if (!d.lat || !d.lon) return;
+    const color = getPartnerColor(d.partner);
+    const marker = L.marker([d.lat, d.lon], { icon: createIcon(color) })
+      .bindPopup(buildPopup(d), { maxWidth: 300 })
+      .addTo(map);
+
+    marker.on('click', () => highlightListItem(i));
+    markers[i] = marker;
+  });
+
+  updateCounters();
+}
+
+function renderList() {
+  const list = document.getElementById('list');
+
+  if (filteredData.length === 0) {
+    list.innerHTML = `<div class="empty-state">Нет поселков по заданным фильтрам</div>`;
+    return;
+  }
+
+  list.innerHTML = filteredData.map((d, i) => {
+    const color = getPartnerColor(d.partner);
+    const km = d.km ? `${d.km} км` : '';
+    const hw = d.highway || '';
+    return `
+      <div class="list-item" id="list-item-${i}" onclick="focusItem(${i})">
+        <div class="item-dot" style="background:${color}"></div>
+        <div class="item-body">
+          <div class="item-name">${d.name}</div>
+          <div class="item-meta">
+            ${km && hw ? `<span>${hw}, ${km}</span>` : (km || hw)}
+            ${d.status === 'Старт продаж' ? `<span class="item-tag" style="color:#f97316;border-color:rgba(249,115,22,0.3)">Старт</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateCounters() {
+  document.getElementById('total-count').textContent = filteredData.length;
+  document.getElementById('list-count').textContent = filteredData.length;
+}
+
+// ============================================================
+//  INTERACTION
+// ============================================================
+
+function focusItem(i) {
+  const d = filteredData[i];
+  if (!d || !d.lat) return;
+
+  map.setView([d.lat, d.lon], 13, { animate: true });
+
+  if (markers[i]) {
+    setTimeout(() => markers[i].openPopup(), 400);
+  }
+
+  highlightListItem(i);
+}
+
+function highlightListItem(i) {
+  if (activeListItem !== null) {
+    const prev = document.getElementById(`list-item-${activeListItem}`);
+    if (prev) prev.classList.remove('active');
+  }
+  const cur = document.getElementById(`list-item-${i}`);
+  if (cur) {
+    cur.classList.add('active');
+    cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  activeListItem = i;
+}
+
+// ============================================================
+//  FILTERS
+// ============================================================
+
+function applyFilters() {
+  renderLegend();
+  const search = document.getElementById('search').value.toLowerCase();
+  const direction = document.getElementById('filter-direction').value;
+  const status = document.getElementById('filter-status').value;
+
+  filteredData = allData.filter(d => {
+    if (!activePartners.has(d.partner)) return false;
+    if (search && !d.name.toLowerCase().includes(search)) return false;
+    if (direction && d.direction !== direction) return false;
+    if (status && d.status !== status) return false;
+    return true;
+  });
+
+  renderMarkers();
+  renderList();
+}
+
+const ALL_SWATCHES = [
+  '#e8c547','#3b82f6','#22c55e','#f97316',
+  '#e879f9','#06b6d4','#f43f5e','#84cc16',
+  '#8b5cf6','#14b8a6','#a78bfa','#34d399',
+  '#f472b6','#60a5fa','#facc15','#fb923c',
+];
+
+function renderLegend() {
+  const legend = document.getElementById('legend');
+  // Собираем всех уникальных партнёров из данных
+  const partners = [...new Set(allData.map(d => d.partner).filter(Boolean))];
+  
+  legend.innerHTML = partners.map(partner => {
+    const color = getPartnerColor(partner);
+    const isActive = activePartners.has(partner);
+    const shortName = partner.length > 12 ? partner.slice(0, 11) + '…' : partner;
+    return `
+      <div class="legend-item ${isActive ? 'active' : ''}" 
+           data-partner="${partner}" 
+           style="opacity:${isActive ? 1 : 0.4}"
+           onclick="togglePartner(this, event)">
+        <div class="legend-dot" style="background:${color}"></div>
+        ${shortName}
+        <svg class="color-edit-btn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             onclick="openColorPicker(event, '${partner}')">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <div class="color-picker-wrap" id="picker-${partner.replace(/\s+/g,'-')}">
+          ${ALL_SWATCHES.map(c => `<div class="color-swatch ${c===color?'selected':''}" style="background:${c}" onclick="setPartnerColor(event, '${partner}', '${c}')"></div>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openColorPicker(e, partner) {
+  e.stopPropagation();
+  // Закрываем все открытые
+  document.querySelectorAll('.color-picker-wrap.open').forEach(el => el.classList.remove('open'));
+  const id = 'picker-' + partner.replace(/\s+/g, '-');
+  const picker = document.getElementById(id);
+  if (picker) picker.classList.toggle('open');
+}
+
+function setPartnerColor(e, partner, color) {
+  e.stopPropagation();
+  PARTNER_COLORS[partner] = color;
+  saveColors();
+  renderLegend();
+  renderMarkers();
+  // Закрываем picker
+  document.querySelectorAll('.color-picker-wrap.open').forEach(el => el.classList.remove('open'));
+}
+
+// Закрываем picker кликом вне
+document.addEventListener('click', () => {
+  document.querySelectorAll('.color-picker-wrap.open').forEach(el => el.classList.remove('open'));
+});
+
+function togglePartner(el, e) {
+  if (e) e.stopPropagation();
+  // Не переключаем если клик был по иконке или пикеру
+  if (e && (e.target.closest('.color-edit-btn') || e.target.closest('.color-picker-wrap'))) return;
+  const partner = el.dataset.partner;
+  if (activePartners.has(partner)) {
+    activePartners.delete(partner);
+    el.classList.remove('active');
+    el.style.opacity = '0.4';
+  } else {
+    activePartners.add(partner);
+    el.classList.add('active');
+    el.style.opacity = '1';
+  }
+  applyFilters();
+}
+
+// ============================================================
+//  GOOGLE SHEETS LOADER
+// ============================================================
+
+function detectUrlType(url) {
+  if (url.includes('script.google.com/macros')) return 'apps_script';
+  if (url.includes('spreadsheets/d/')) return 'sheets';
+  return null;
+}
+
+async function loadFromSheets() {
+  const url = document.getElementById('sheets-url').value.trim();
+  if (!url) {
+    showToast('Вставь ссылку на Apps Script или Google Таблицу', 'error');
+    return;
+  }
+
+  const type = detectUrlType(url);
+  if (!type) {
+    showToast('Неверный формат ссылки', 'error');
+    return;
+  }
+
+  showToast('Загружаю данные...');
+
+  try {
+    if (type === 'apps_script') {
+      // Apps Script возвращает JSON
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Нет доступа');
+      const json = await resp.json();
+
+      if (!Array.isArray(json) || json.length === 0) throw new Error('Данные пустые или неверный формат');
+
+      const parsed = parseJSON(json);
+      if (parsed.length === 0) throw new Error('Не найдено ни одного поселка с координатами');
+
+      allData = parsed;
+      // Добавляем новых партнёров в активные
+      parsed.forEach(d => { if (d.partner) activePartners.add(d.partner); });
+      applyFilters();
+      showToast(`✓ Загружено ${parsed.length} поселков`, 'success');
+
+    } else {
+      // Прямая Google Таблица — CSV экспорт
+      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      const sheetId = match ? match[1] : null;
+      if (!sheetId) throw new Error('Не удалось извлечь ID таблицы');
+
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+      const resp = await fetch(csvUrl);
+      if (!resp.ok) throw new Error('Нет доступа к таблице. Попробуй Apps Script.');
+      const text = await resp.text();
+      const parsed = parseCSV(text);
+      if (parsed.length === 0) throw new Error('Таблица пустая или неверный формат');
+
+      allData = parsed;
+      // Добавляем новых партнёров в активные
+      parsed.forEach(d => { if (d.partner) activePartners.add(d.partner); });
+      applyFilters();
+      showToast(`✓ Загружено ${parsed.length} поселков`, 'success');
+    }
+  } catch (e) {
+    showToast('Ошибка: ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+function parseJSON(rows) {
+  // rows — массив объектов из Apps Script
+  const colMap = {
+    'название': 'name',
+    'партнёр': 'partner',
+    'направление': 'direction',
+    'шоссе': 'highway',
+    'км от мкад': 'km',
+    'широта': 'lat',
+    'долгота': 'lon',
+    'статус': 'status',
+    'тип': 'type',
+    'цена от (млн руб)': 'price',
+    'сайт': 'site',
+    'заметки': 'notes',
+  };
+
+  return rows.map(row => {
+    const d = {};
+    Object.entries(row).forEach(([key, val]) => {
+      const mapped = colMap[key.toLowerCase().trim()];
+      if (mapped) d[mapped] = String(val).trim();
+    });
+    const lat = parseFloat(d.lat);
+    const lon = parseFloat(d.lon);
+    if (!d.name || isNaN(lat) || isNaN(lon)) return null;
+    return { ...d, lat, lon, km: parseInt(d.km) || 0 };
+  }).filter(Boolean);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+
+  // Маппинг заголовков
+  const colMap = {
+    'название': 'name',
+    'партнёр': 'partner',
+    'направление': 'direction',
+    'шоссе': 'highway',
+    'км от мкад': 'km',
+    'широта': 'lat',
+    'долгота': 'lon',
+    'статус': 'status',
+    'тип': 'type',
+    'цена от (млн руб)': 'price',
+    'сайт': 'site',
+    'заметки': 'notes',
+  };
+
+  const colIndex = {};
+  headers.forEach((h, i) => {
+    const key = colMap[h];
+    if (key) colIndex[key] = i;
+  });
+
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCSVLine(lines[i]);
+    if (!cols || cols.length < 3) continue;
+
+    const get = (key) => {
+      const idx = colIndex[key];
+      return idx !== undefined ? (cols[idx] || '').trim() : '';
+    };
+
+    const lat = parseFloat(get('lat'));
+    const lon = parseFloat(get('lon'));
+    if (!get('name') || isNaN(lat) || isNaN(lon)) continue;
+
+    result.push({
+      name: get('name'),
+      partner: get('partner') || 'Другое',
+      direction: get('direction'),
+      highway: get('highway'),
+      km: parseInt(get('km')) || 0,
+      lat,
+      lon,
+      status: get('status') || 'В продаже',
+      type: get('type'),
+      price: get('price'),
+      site: get('site'),
+      notes: get('notes'),
+    });
+  }
+
+  return result;
+}
+
+function splitCSVLine(line) {
+  const result = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQuotes = !inQuotes; continue; }
+    if (c === ',' && !inQuotes) { result.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ============================================================
+//  TOAST
+// ============================================================
+
+let toastTimeout;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { el.classList.remove('show'); }, 3500);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadSavedColors();
+  initMap();
+  applyFilters();
+  setTimeout(() => { map.invalidateSize(); }, 300);
+  // Автозагрузка из Apps Script при каждом открытии
+  setTimeout(() => { autoLoadFromScript(); }, 500);
+});
+
+async function autoLoadFromScript() {
+  showToast('Загружаю данные...');
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL + '?t=' + Date.now());
+    if (!resp.ok) throw new Error('Нет доступа');
+    const json = await resp.json();
+    if (!Array.isArray(json) || json.length === 0) throw new Error('Пустой ответ');
+    const parsed = parseJSON(json);
+    if (parsed.length === 0) throw new Error('Нет данных с координатами');
+    allData = parsed;
+    applyFilters();
+    showToast('✓ Загружено ' + parsed.length + ' поселков', 'success');
+  } catch(e) {
+    // Если не загрузилось — показываем встроенные данные
+    console.warn('Apps Script недоступен, используем встроенные данные:', e.message);
+    showToast('Встроенные данные (' + allData.length + ' поселков)', '');
+  }
+}
+</script>
+</body>
+</html>
