@@ -540,6 +540,168 @@
   }
 
   .info-box strong { color: var(--text); }
+
+  /* ============================================================
+     MOBILE RESPONSIVE
+     ============================================================ */
+  @media (max-width: 768px) {
+
+    /* Header — скрываем поле ввода, оставляем лого + синхронизацию */
+    .header {
+      padding: 0 12px;
+      height: 50px;
+      gap: 10px;
+    }
+    .logo span { display: none; }
+    .sheets-input-wrap { display: none; }
+    .header-divider { display: none; }
+    .counter { font-size: 10px; }
+    .counter strong { font-size: 14px; }
+
+    /* Main — карта на весь экран, панель как шторка снизу */
+    .main {
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Карта занимает весь экран */
+    #map {
+      height: 100% !important;
+      width: 100% !important;
+    }
+
+    /* Контейнер карты — растягиваем */
+    .main > div:last-child {
+      flex: 1;
+      height: 100%;
+    }
+
+    /* Sidebar — шторка снизу */
+    .sidebar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 60px; /* закрытое состояние */
+      border-right: none;
+      border-top: 1px solid var(--border);
+      border-radius: 16px 16px 0 0;
+      z-index: 1000;
+      transition: height 0.3s ease;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sidebar.open {
+      height: 75vh;
+      overflow-y: auto;
+    }
+
+    /* Ручка шторки */
+    .sidebar::before {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 10px auto 6px;
+      flex-shrink: 0;
+    }
+
+    /* Мобильный тоггл */
+    .mobile-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .mobile-toggle-label {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.5px;
+    }
+
+    .mobile-toggle-count {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .mobile-toggle-arrow {
+      color: var(--text-muted);
+      font-size: 16px;
+      transition: transform 0.3s;
+    }
+
+    .sidebar.open .mobile-toggle-arrow {
+      transform: rotate(180deg);
+    }
+
+    /* Прячем десктопный заголовок списка на мобиле */
+    .list-header { display: none; }
+
+    /* Фильтры — горизонтальный скролл */
+    .filters {
+      padding: 8px 12px;
+      flex-direction: row;
+      overflow-x: auto;
+      gap: 8px;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .filters::-webkit-scrollbar { display: none; }
+
+    .filters > div {
+      flex-shrink: 0;
+      min-width: 140px;
+    }
+
+    .filter-label { display: none; }
+
+    .select-filter, .search-wrap input {
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+
+    /* Легенда — горизонтальный скролл */
+    .legend {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 8px 12px;
+    }
+    .legend::-webkit-scrollbar { display: none; }
+
+    .legend-item { font-size: 10px; flex-shrink: 0; }
+
+    /* Список поселков */
+    .list { padding: 0 8px 80px; }
+
+    /* Попап — на всю ширину снизу */
+    .leaflet-popup-content-wrapper {
+      width: calc(100vw - 32px) !important;
+      max-width: 400px !important;
+      margin: 0 auto !important;
+    }
+
+    /* Info box — убираем на мобиле */
+    .info-box { display: none; }
+
+    /* Кнопка синхронизации — только иконка */
+    .sync-btn span { display: none; }
+  }
+
 </style>
 </head>
 <body>
@@ -588,11 +750,6 @@
         <div class="filter-label">Направление</div>
         <select class="select-filter" id="filter-direction" onchange="applyFilters()">
           <option value="">Все направления</option>
-          <option>Север</option>
-          <option>Юг</option>
-          <option>Запад</option>
-          <option>Восток</option>
-          <option>Северо-восток</option>
         </select>
       </div>
       <div>
@@ -606,6 +763,14 @@
       </div>
     </div>
 
+    <!-- MOBILE TOGGLE -->
+    <div class="mobile-toggle" id="mobile-toggle" onclick="toggleSidebar()">
+      <span class="mobile-toggle-label">🏘 Поселки</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="mobile-toggle-count" id="mobile-count">0</span>
+        <span class="mobile-toggle-arrow" id="toggle-arrow">▲</span>
+      </div>
+    </div>
     <!-- LEGEND -->
     <div class="legend" id="legend"></div>
 
@@ -865,6 +1030,8 @@ function renderList() {
 function updateCounters() {
   document.getElementById('total-count').textContent = filteredData.length;
   document.getElementById('list-count').textContent = filteredData.length;
+  const mc = document.getElementById('mobile-count');
+  if (mc) mc.textContent = filteredData.length;
 }
 
 // ============================================================
@@ -902,6 +1069,7 @@ function highlightListItem(i) {
 // ============================================================
 
 function applyFilters() {
+  updateFilterOptions();
   renderLegend();
   const search = document.getElementById('search').value.toLowerCase();
   const direction = document.getElementById('filter-direction').value;
@@ -925,6 +1093,22 @@ const ALL_SWATCHES = [
   '#8b5cf6','#14b8a6','#a78bfa','#34d399',
   '#f472b6','#60a5fa','#facc15','#fb923c',
 ];
+
+function updateFilterOptions() {
+  // Направления — динамически из данных
+  const dirSelect = document.getElementById('filter-direction');
+  const curDir = dirSelect.value;
+  const dirs = [...new Set(allData.map(d => d.direction).filter(Boolean))].sort();
+  dirSelect.innerHTML = '<option value="">Все направления</option>' +
+    dirs.map(d => `<option ${d===curDir?'selected':''}>${d}</option>`).join('');
+
+  // Статусы — динамически из данных
+  const stSelect = document.getElementById('filter-status');
+  const curSt = stSelect.value;
+  const statuses = [...new Set(allData.map(d => d.status).filter(Boolean))].sort();
+  stSelect.innerHTML = '<option value="">Все статусы</option>' +
+    statuses.map(s => `<option ${s===curSt?'selected':''}>${s}</option>`).join('');
+}
 
 function renderLegend() {
   const legend = document.getElementById('legend');
@@ -1184,6 +1368,22 @@ function showToast(msg, type = '') {
 // ============================================================
 //  INIT
 // ============================================================
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  sidebar.classList.toggle('open');
+}
+
+// Закрываем шторку при клике на карту
+document.addEventListener('DOMContentLoaded', () => {
+  const mapEl = document.getElementById('map');
+  if (mapEl) {
+    mapEl.addEventListener('click', () => {
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) sidebar.classList.remove('open');
+    });
+  }
+});
 
 window.addEventListener('DOMContentLoaded', () => {
   loadSavedColors();
