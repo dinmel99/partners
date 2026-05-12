@@ -94,43 +94,7 @@
   .sync-btn:hover { border-color: var(--accent); color: var(--accent); }
   .sync-btn svg { width: 14px; height: 14px; }
 
-  .sheets-input-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 4px 4px 12px;
-    transition: border-color 0.2s;
-  }
-  .sheets-input-wrap:focus-within { border-color: var(--accent2); }
-
-  .sheets-input-wrap input {
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text);
-    font-family: 'Golos Text', sans-serif;
-    font-size: 13px;
-    width: 260px;
-  }
-
-  .sheets-input-wrap input::placeholder { color: var(--text-muted); }
-
-  .btn-load {
-    background: var(--accent2);
-    color: white;
-    border: none;
-    padding: 5px 12px;
-    border-radius: 4px;
-    font-family: 'Golos Text', sans-serif;
-    font-size: 12px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-    white-space: nowrap;
-  }
-  .btn-load:hover { opacity: 0.85; }
+  /* sheets-input-wrap удалён — ссылка вшита в код */
 
   /* MAIN */
   .main {
@@ -606,7 +570,6 @@
     /* Хедер */
     .header { padding: 0 12px; height: 52px; gap: 8px; }
     .logo span { display: none; }
-    .sheets-input-wrap { display: none; }
     .header-divider { display: none; }
     .counter { font-size: 10px; }
     .counter strong { font-size: 15px; }
@@ -712,11 +675,7 @@
   </button>
   <div class="header-right">
     <!-- Google Sheets URL input -->
-    <div class="sheets-input-wrap">
-      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
-      <input type="text" id="sheets-url" placeholder="Вставь ссылку на Apps Script или Google Таблицу...">
-      <button class="btn-load" onclick="loadFromSheets()">Загрузить</button>
-    </div>
+
 
     <div id="sync-time" style="font-size:11px;color:var(--text-muted);white-space:nowrap;display:none">
         обновлено <span id="sync-time-val">—</span>
@@ -760,6 +719,15 @@
           <option>В продаже</option>
           <option>Старт продаж</option>
           <option>Завершён</option>
+        </select>
+      </div>
+      <div>
+        <div class="filter-label">Тип объекта</div>
+        <select class="select-filter" id="filter-type" onchange="applyFilters()">
+          <option value="">Все типы</option>
+          <option value="участки">Участки</option>
+          <option value="дома">Дома</option>
+          <option value="таунхаус">Таунхаус / Квартиры</option>
         </select>
       </div>
     </div>
@@ -1110,6 +1078,7 @@ function resetFilters() {
   document.getElementById('search').value = '';
   document.getElementById('filter-direction').value = '';
   document.getElementById('filter-status').value = '';
+  document.getElementById('filter-type').value = '';
   // Включаем всех партнёров
   document.querySelectorAll('.legend-item').forEach(el => {
     const partner = el.dataset.partner;
@@ -1128,12 +1097,19 @@ function applyFilters() {
   const search = document.getElementById('search').value.toLowerCase();
   const direction = document.getElementById('filter-direction').value;
   const status = document.getElementById('filter-status').value;
+  const typeFilter = document.getElementById('filter-type').value;
 
   filteredData = allData.filter(d => {
     if (!activePartners.has(d.partner)) return false;
     if (search && !d.name.toLowerCase().includes(search)) return false;
     if (direction && d.direction !== direction) return false;
     if (status && d.status !== status) return false;
+    if (typeFilter) {
+      const t = (d.type || '').toLowerCase();
+      if (typeFilter === 'участки' && !t.includes('участк')) return false;
+      if (typeFilter === 'дома' && !t.includes('дом')) return false;
+      if (typeFilter === 'таунхаус' && !t.includes('таунхаус') && !t.includes('квартир') && !t.includes('коттедж')) return false;
+    }
     return true;
   });
 
