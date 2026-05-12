@@ -725,9 +725,6 @@
         <div class="filter-label">Тип объекта</div>
         <select class="select-filter" id="filter-type" onchange="applyFilters()">
           <option value="">Все типы</option>
-          <option value="участки">Участки</option>
-          <option value="дома">Дома</option>
-          <option value="таунхаус">Таунхаус / Квартиры</option>
         </select>
       </div>
     </div>
@@ -1106,9 +1103,11 @@ function applyFilters() {
     if (status && d.status !== status) return false;
     if (typeFilter) {
       const t = (d.type || '').toLowerCase();
-      if (typeFilter === 'участки' && !t.includes('участк')) return false;
-      if (typeFilter === 'дома' && !t.includes('дом')) return false;
-      if (typeFilter === 'таунхаус' && !t.includes('таунхаус') && !t.includes('квартир') && !t.includes('коттедж')) return false;
+      const match =
+        (typeFilter === 'участки' && t.includes('участк')) ||
+        (typeFilter === 'дома' && (t.includes('дом') || t.includes('коттедж'))) ||
+        (typeFilter === 'таунхаус' && (t.includes('таунхаус') || t.includes('квартир')));
+      if (!match) return false;
     }
     return true;
   });
@@ -1122,6 +1121,13 @@ const ALL_SWATCHES = [
   '#e879f9','#06b6d4','#f43f5e','#84cc16',
   '#8b5cf6','#14b8a6','#a78bfa','#34d399',
   '#f472b6','#60a5fa','#facc15','#fb923c',
+];
+
+// Умная группировка типов — ключевые слова для каждой группы
+const TYPE_GROUPS = [
+  { value: 'участки', label: 'Участки',            match: t => t.includes('участк') },
+  { value: 'дома',    label: 'Дома / Коттеджи',    match: t => t.includes('дом') || t.includes('коттедж') },
+  { value: 'таунхаус',label: 'Таунхаус / Квартиры',match: t => t.includes('таунхаус') || t.includes('квартир') },
 ];
 
 function updateFilterOptions() {
@@ -1138,6 +1144,17 @@ function updateFilterOptions() {
   const statuses = [...new Set(allData.map(d => d.status).filter(Boolean))].sort();
   stSelect.innerHTML = '<option value="">Все статусы</option>' +
     statuses.map(s => `<option ${s===curSt?'selected':''}>${s}</option>`).join('');
+
+  // Типы — умная группировка, показываем только те группы у которых есть данные
+  const typeSelect = document.getElementById('filter-type');
+  const curType = typeSelect.value;
+  const availableGroups = TYPE_GROUPS.filter(group =>
+    allData.some(d => group.match((d.type || '').toLowerCase()))
+  );
+  typeSelect.innerHTML = '<option value="">Все типы</option>' +
+    availableGroups.map(g =>
+      `<option value="${g.value}" ${g.value===curType?'selected':''}>${g.label}</option>`
+    ).join('');
 }
 
 function renderLegend() {
