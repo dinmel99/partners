@@ -7,7 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Unbounded:wght@300;400;600&family=Golos+Text:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
   :root {
     --bg: #0d0f14;
@@ -541,6 +544,9 @@
 
   .info-box strong { color: var(--text); }
 
+  /* mobile-toggle скрыт на десктопе */
+  .mobile-toggle { display: none; }
+
   /* ============================================================
      MOBILE RESPONSIVE
      ============================================================ */
@@ -583,7 +589,7 @@
       left: 0;
       right: 0;
       width: 100%;
-      height: 60px; /* закрытое состояние */
+      height: 90px; /* закрытое состояние */
       border-right: none;
       border-top: 1px solid var(--border);
       border-radius: 16px 16px 0 0;
@@ -597,6 +603,9 @@
       height: 75vh;
       overflow-y: auto;
     }
+
+    /* Показываем тоггл только на мобиле */
+    .mobile-toggle { display: flex; }
 
     /* Ручка шторки */
     .sidebar::before {
@@ -700,7 +709,36 @@
 
     /* Кнопка синхронизации — только иконка */
     .sync-btn span { display: none; }
+    #sync-time { display: none !important; }
   }
+
+
+  /* КЛАСТЕРЫ */
+  .marker-cluster-custom {
+    background: var(--surface2);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+  }
+  .marker-cluster-custom:hover { transform: scale(1.1); }
+  .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 600;
+  }
+  .marker-cluster-small { background-color: rgba(232,197,71,0.15) !important; border: 2px solid #e8c547; }
+  .marker-cluster-small div { background-color: rgba(232,197,71,0.5) !important; color: #e8c547; }
+  .marker-cluster-medium { background-color: rgba(59,130,246,0.15) !important; border: 2px solid #3b82f6; }
+  .marker-cluster-medium div { background-color: rgba(59,130,246,0.5) !important; color: #fff; }
+  .marker-cluster-large { background-color: rgba(249,115,22,0.15) !important; border: 2px solid #f97316; }
+  .marker-cluster-large div { background-color: rgba(249,115,22,0.5) !important; color: #fff; }
 
 </style>
 </head>
@@ -720,6 +758,9 @@
       <button class="btn-load" onclick="loadFromSheets()">Загрузить</button>
     </div>
 
+    <div id="sync-time" style="font-size:11px;color:var(--text-muted);white-space:nowrap;display:none">
+        обновлено <span id="sync-time-val">—</span>
+      </div>
     <button class="sync-btn" onclick="autoLoadFromScript()" title="Обновить данные">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
@@ -786,10 +827,8 @@
   <div style="flex:1; position:relative; height:100%;">
     <div id="map"></div>
     <div class="info-box">
-      <strong>Как использовать:</strong><br>
-      1. Вставь ссылку на Google Таблицу<br>
-      2. Нажми «Загрузить»<br>
-      3. Карта обновится автоматически
+      <strong>Данные обновляются автоматически</strong><br>
+      Нажми «Синхронизировать» для получения актуальных данных
     </div>
   </div>
 </div>
@@ -908,6 +947,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzXSPtnnnE3999
 let allData = [...DEFAULT_DATA];
 let filteredData = [...allData];
 let markers = {};
+let clusterGroup = null;
 let activePartners = new Set(Object.keys(PARTNER_COLORS));
 let activeListItem = null;
 let map;
@@ -929,6 +969,25 @@ function initMap() {
   }).addTo(map);
 
   L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+  // Инициализируем кластер
+  clusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 50,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    disableClusteringAtZoom: 13,
+    iconCreateFunction: function(cluster) {
+      const count = cluster.getChildCount();
+      let size = count < 10 ? 34 : count < 30 ? 40 : 46;
+      return L.divIcon({
+        html: '<div style="width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;border-radius:50%;background:var(--surface2);border:2px solid var(--accent);text-align:center;font-family:Unbounded,sans-serif;font-size:11px;font-weight:600;color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,0.5)">' + count + '</div>',
+        className: '',
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2],
+      });
+    }
+  });
+  map.addLayer(clusterGroup);
 }
 
 // ============================================================
@@ -982,21 +1041,24 @@ function buildPopup(d) {
 // ============================================================
 
 function renderMarkers() {
-  // Удаляем старые
-  Object.values(markers).forEach(m => map.removeLayer(m));
+  // Очищаем кластер и маркеры
+  if (clusterGroup) clusterGroup.clearLayers();
   markers = {};
+
+  const newMarkers = [];
 
   filteredData.forEach((d, i) => {
     if (!d.lat || !d.lon) return;
     const color = getPartnerColor(d.partner);
     const marker = L.marker([d.lat, d.lon], { icon: createIcon(color) })
-      .bindPopup(buildPopup(d), { maxWidth: 300 })
-      .addTo(map);
+      .bindPopup(buildPopup(d), { maxWidth: 300 });
 
     marker.on('click', () => highlightListItem(i));
     markers[i] = marker;
+    newMarkers.push(marker);
   });
 
+  if (clusterGroup) clusterGroup.addLayers(newMarkers);
   updateCounters();
 }
 
@@ -1394,6 +1456,18 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => { autoLoadFromScript(); }, 500);
 });
 
+function updateSyncTime() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2,'0');
+  const m = now.getMinutes().toString().padStart(2,'0');
+  const d = now.getDate().toString().padStart(2,'0');
+  const mo = (now.getMonth()+1).toString().padStart(2,'0');
+  const val = document.getElementById('sync-time-val');
+  const wrap = document.getElementById('sync-time');
+  if (val) val.textContent = d + '.' + mo + ' ' + h + ':' + m;
+  if (wrap) wrap.style.display = 'block';
+}
+
 async function autoLoadFromScript() {
   showToast('Загружаю данные...');
   try {
@@ -1406,6 +1480,7 @@ async function autoLoadFromScript() {
     allData = parsed;
     applyFilters();
     showToast('✓ Загружено ' + parsed.length + ' поселков', 'success');
+    updateSyncTime();
   } catch(e) {
     // Если не загрузилось — показываем встроенные данные
     console.warn('Apps Script недоступен, используем встроенные данные:', e.message);
