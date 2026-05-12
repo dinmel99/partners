@@ -771,6 +771,14 @@
 //  DATA
 // ============================================================
 
+
+// Конфиг бейджей
+const BADGE_CONFIG = {
+  'новинка': { bg: 'rgba(59,130,246,0.9)',  border: '#3b82f6', label: '✨ Новинка' },
+  'хит':     { bg: 'rgba(232,197,71,0.9)',   border: '#e8c547', label: '🔥 Хит'    },
+  'акция':   { bg: 'rgba(249,115,22,0.9)',   border: '#f97316', label: '🎯 Акция'  },
+};
+
 // Базовые цвета для известных партнёров
 const BASE_COLORS = {
   'Ваш КП':              '#e8c547',
@@ -924,12 +932,17 @@ function initMap() {
 //  MARKER
 // ============================================================
 
-function createIcon(color) {
+function createIcon(color, badge) {
+  const badgeKey = (badge || '').toLowerCase().trim();
+  const bc = BADGE_CONFIG[badgeKey];
+  const badgeHtml = bc
+    ? `<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:${bc.bg};border:1px solid ${bc.border};color:#fff;font-size:9px;font-family:'Unbounded',sans-serif;font-weight:600;padding:2px 5px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.4)">${bc.label}</div>`
+    : '';
   return L.divIcon({
-    html: `<div class="custom-marker" style="background:${color}"><div class="dot"></div></div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -30],
+    html: `<div style="position:relative;display:inline-block">${badgeHtml}<div class="custom-marker" style="background:${color}"><div class="dot"></div></div></div>`,
+    iconSize: [28, badge ? 48 : 28],
+    iconAnchor: [14, badge ? 48 : 28],
+    popupAnchor: [0, badge ? -50 : -30],
   });
 }
 
@@ -950,18 +963,36 @@ function buildPopup(d) {
   const kmStr = d.km ? `<div class="popup-row"><strong>От МКАД:</strong> ${d.km} км · ${d.highway || '—'}</div>` : '';
   const linkHtml = d.site ? `<a href="${d.site}" target="_blank" class="popup-link">Открыть сайт ↗</a>` : '';
 
+  // Фото
+  const photoHtml = d.photo
+    ? `<div style="margin:-16px -1px 12px;border-radius:8px 8px 0 0;overflow:hidden;height:140px;background:var(--surface)">
+        <img src="${d.photo}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'">
+       </div>`
+    : '';
+
+  // Бейдж в попапе
+  const badgeKey = (d.badge || '').toLowerCase().trim();
+  const bc = BADGE_CONFIG[badgeKey];
+  const badgeHtml = bc
+    ? `<span style="display:inline-block;background:${bc.bg};border:1px solid ${bc.border};color:#fff;font-size:10px;font-family:'Unbounded',sans-serif;font-weight:600;padding:2px 8px;border-radius:4px;margin-bottom:6px">${bc.label}</span>`
+    : '';
+
   return `
-    <div class="popup-inner">
-      <div class="popup-partner" style="color:${color}">${d.partner || ''}</div>
-      <div class="popup-name">${d.name}</div>
-      ${getStatusBadge(d.status)}
-      <div style="margin-top:10px">
-        ${kmStr}
-        ${priceStr}
-        ${d.type ? `<div class="popup-row"><strong>Тип:</strong> ${d.type}</div>` : ''}
-        ${d.notes ? `<div class="popup-row"><strong>Заметка:</strong> ${d.notes}</div>` : ''}
+    <div class="popup-inner" style="padding:${d.photo ? '0' : '16px'}">
+      ${photoHtml}
+      <div style="${d.photo ? 'padding:12px 16px 16px' : ''}">
+        ${badgeHtml}
+        <div class="popup-partner" style="color:${color};${d.photo ? '' : ''}">${d.partner || ''}</div>
+        <div class="popup-name">${d.name}</div>
+        ${getStatusBadge(d.status)}
+        <div style="margin-top:10px">
+          ${kmStr}
+          ${priceStr}
+          ${d.type ? `<div class="popup-row"><strong>Тип:</strong> ${d.type}</div>` : ''}
+          ${d.notes ? `<div class="popup-row"><strong>Заметка:</strong> ${d.notes}</div>` : ''}
+        </div>
+        ${linkHtml}
       </div>
-      ${linkHtml}
     </div>
   `;
 }
@@ -980,7 +1011,7 @@ function renderMarkers() {
   filteredData.forEach((d, i) => {
     if (!d.lat || !d.lon) return;
     const color = getPartnerColor(d.partner);
-    const marker = L.marker([d.lat, d.lon], { icon: createIcon(color) })
+    const marker = L.marker([d.lat, d.lon], { icon: createIcon(color, d.badge) })
       .bindPopup(buildPopup(d), { maxWidth: 300, autoPan: true, autoPanPadding: [20, 20], keepInView: true });
 
     marker.on('click', () => highlightListItem(i));
@@ -1012,6 +1043,7 @@ function renderList() {
           <div class="item-meta">
             ${km && hw ? `<span>${hw}, ${km}</span>` : (km || hw)}
             ${d.status === 'Старт продаж' ? `<span class="item-tag" style="color:#f97316;border-color:rgba(249,115,22,0.3)">Старт</span>` : ''}
+          ${d.badge ? (() => { const bk=(d.badge||'').toLowerCase().trim(); const bc=BADGE_CONFIG[bk]; return bc ? `<span class="item-tag" style="color:#fff;background:${bc.bg};border-color:${bc.border}">${bc.label}</span>` : ''; })() : ''}
           </div>
         </div>
       </div>
@@ -1309,6 +1341,8 @@ function parseJSON(rows) {
     'цена от (млн руб)': 'price',
     'сайт': 'site',
     'заметки': 'notes',
+    'фото': 'photo',
+    'бейдж': 'badge',
   };
 
   return rows.map(row => {
@@ -1344,6 +1378,8 @@ function parseCSV(text) {
     'цена от (млн руб)': 'price',
     'сайт': 'site',
     'заметки': 'notes',
+    'фото': 'photo',
+    'бейдж': 'badge',
   };
 
   const colIndex = {};
