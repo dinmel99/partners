@@ -818,7 +818,11 @@
     <!-- LIST -->
     <div class="list-header">
       <div class="list-title">Поселки</div>
-      <div class="list-count" id="list-count">0</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="list-count" id="list-count" style="color:var(--accent)">0</div>
+        <div style="font-size:10px;color:var(--text-muted)" id="list-total"></div>
+        <button id="reset-filters-btn" onclick="resetFilters()" style="display:none;background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:'Golos Text',sans-serif;transition:all 0.2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">сбросить</button>
+      </div>
     </div>
     <div class="list" id="list"></div>
   </div>
@@ -1051,7 +1055,7 @@ function renderMarkers() {
     if (!d.lat || !d.lon) return;
     const color = getPartnerColor(d.partner);
     const marker = L.marker([d.lat, d.lon], { icon: createIcon(color) })
-      .bindPopup(buildPopup(d), { maxWidth: 300 });
+      .bindPopup(buildPopup(d), { maxWidth: 300, autoPan: true, autoPanPadding: [20, 20], keepInView: true });
 
     marker.on('click', () => highlightListItem(i));
     markers[i] = marker;
@@ -1090,10 +1094,21 @@ function renderList() {
 }
 
 function updateCounters() {
-  document.getElementById('total-count').textContent = filteredData.length;
-  document.getElementById('list-count').textContent = filteredData.length;
+  const total = allData.length;
+  const found = filteredData.length;
+  const isFiltered = found < total;
+
+  document.getElementById('total-count').textContent = found;
+  document.getElementById('list-count').textContent = found;
+
+  const totalEl = document.getElementById('list-total');
+  if (totalEl) totalEl.textContent = isFiltered ? 'из ' + total : '';
+
+  const resetBtn = document.getElementById('reset-filters-btn');
+  if (resetBtn) resetBtn.style.display = isFiltered ? 'block' : 'none';
+
   const mc = document.getElementById('mobile-count');
-  if (mc) mc.textContent = filteredData.length;
+  if (mc) mc.textContent = found + (isFiltered ? '/' + total : '');
 }
 
 // ============================================================
@@ -1129,6 +1144,22 @@ function highlightListItem(i) {
 // ============================================================
 //  FILTERS
 // ============================================================
+
+function resetFilters() {
+  document.getElementById('search').value = '';
+  document.getElementById('filter-direction').value = '';
+  document.getElementById('filter-status').value = '';
+  // Включаем всех партнёров
+  document.querySelectorAll('.legend-item').forEach(el => {
+    const partner = el.dataset.partner;
+    if (partner) {
+      activePartners.add(partner);
+      el.classList.add('active');
+      el.style.opacity = '1';
+    }
+  });
+  applyFilters();
+}
 
 function applyFilters() {
   updateFilterOptions();
@@ -1435,17 +1466,6 @@ function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
   sidebar.classList.toggle('open');
 }
-
-// Закрываем шторку при клике на карту
-document.addEventListener('DOMContentLoaded', () => {
-  const mapEl = document.getElementById('map');
-  if (mapEl) {
-    mapEl.addEventListener('click', () => {
-      const sidebar = document.querySelector('.sidebar');
-      if (sidebar) sidebar.classList.remove('open');
-    });
-  }
-});
 
 window.addEventListener('DOMContentLoaded', () => {
   loadSavedColors();
