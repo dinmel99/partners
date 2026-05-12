@@ -376,6 +376,48 @@
   .status-start { background: rgba(249,115,22,0.15); color: #f97316; border: 1px solid rgba(249,115,22,0.3); }
   .status-done { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
 
+
+  /* LEGEND HEADER */
+  .legend-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px 4px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .legend-header:hover { border-color: var(--border); }
+
+  .legend-header-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .legend-toggle-arrow {
+    color: var(--text-muted);
+    font-size: 11px;
+    transition: transform 0.25s;
+    line-height: 1;
+  }
+  .legend-collapsed .legend-toggle-arrow { transform: rotate(180deg); }
+
+  .legend-body {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 200px;
+    opacity: 1;
+  }
+  .legend-collapsed .legend-body {
+    max-height: 0;
+    opacity: 0;
+  }
+
   /* COLOR PICKER */
   .legend-item { position: relative; }
   .color-picker-wrap {
@@ -745,7 +787,15 @@
       </div>
     </div>
     <!-- LEGEND -->
-    <div class="legend" id="legend"></div>
+    <div class="legend-wrap" id="legend-wrap">
+      <div class="legend-header" onclick="toggleLegend()">
+        <span class="legend-header-title">Партнёры</span>
+        <span class="legend-toggle-arrow">▲</span>
+      </div>
+      <div class="legend-body">
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
 
     <!-- LIST -->
     <div class="list-header">
@@ -1528,6 +1578,11 @@ function showToast(msg, type = '') {
 // ============================================================
 //  DRAWER MENU (mobile)
 // ============================================================
+function toggleLegend() {
+  const wrap = document.getElementById('legend-wrap');
+  if (wrap) wrap.classList.toggle('legend-collapsed');
+}
+
 function toggleDrawer() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.getElementById('drawer-overlay');
