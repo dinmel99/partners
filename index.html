@@ -527,6 +527,13 @@
     transform: rotate(45deg);
   }
 
+  /* Поднимаем атрибуцию Leaflet над шторкой на мобиле */
+  @media (max-width: 768px) {
+    .leaflet-bottom.leaflet-left { bottom: 95px !important; }
+    .leaflet-bottom.leaflet-right { bottom: 95px !important; }
+    .leaflet-control-attribution { font-size: 9px !important; }
+  }
+
   .info-box {
     position: absolute;
     bottom: 24px;
@@ -570,10 +577,15 @@
       position: relative;
     }
 
-    /* Карта занимает весь экран */
+    /* Карта занимает весь экран минус высота шторки */
     #map {
       height: 100% !important;
       width: 100% !important;
+    }
+
+    /* Отступ снизу чтобы шторка не перекрывала карту */
+    .main > div:last-child {
+      padding-bottom: 90px;
     }
 
     /* Контейнер карты — растягиваем */
@@ -591,16 +603,17 @@
       width: 100%;
       height: 90px; /* закрытое состояние */
       border-right: none;
-      border-top: 1px solid var(--border);
+      border-top: 2px solid var(--border);
       border-radius: 16px 16px 0 0;
       z-index: 1000;
       transition: height 0.3s ease;
       overflow: hidden;
       flex-shrink: 0;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
     }
 
     .sidebar.open {
-      height: 75vh;
+      height: 80vh;
       overflow-y: auto;
     }
 
@@ -611,12 +624,13 @@
     .sidebar::before {
       content: '';
       display: block;
-      width: 40px;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin: 10px auto 6px;
+      width: 48px;
+      height: 5px;
+      background: var(--text-muted);
+      border-radius: 3px;
+      margin: 10px auto 4px;
       flex-shrink: 0;
+      opacity: 0.6;
     }
 
     /* Мобильный тоггл */
@@ -624,9 +638,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px 8px;
+      padding: 4px 16px 6px;
       cursor: pointer;
       user-select: none;
+      min-height: 44px;
     }
 
     .mobile-toggle-label {
@@ -705,7 +720,14 @@
     }
 
     /* Info box — убираем на мобиле */
-    .info-box { display: none; }
+    /* Поднимаем атрибуцию Leaflet над шторкой на мобиле */
+  @media (max-width: 768px) {
+    .leaflet-bottom.leaflet-left { bottom: 95px !important; }
+    .leaflet-bottom.leaflet-right { bottom: 95px !important; }
+    .leaflet-control-attribution { font-size: 9px !important; }
+  }
+
+  .info-box { display: none; }
 
     /* Кнопка синхронизации — только иконка */
     .sync-btn span { display: none; }
@@ -972,7 +994,7 @@ function initMap() {
     maxZoom: 18,
   }).addTo(map);
 
-  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  L.control.zoom({ position: 'topright' }).addTo(map);
 
   // Инициализируем кластер
   clusterGroup = L.markerClusterGroup({
