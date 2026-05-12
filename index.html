@@ -468,7 +468,8 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Marker cluster числа */
-  .leaflet-div-icon { background: transparent !important; border: none !important; }
+  .leaflet-div-icon { background: transparent !important; border: none !important; overflow: visible !important; }
+  .leaflet-marker-icon { overflow: visible !important; }
 
   .custom-marker {
     width: 28px;
@@ -935,14 +936,49 @@ function initMap() {
 function createIcon(color, badge) {
   const badgeKey = (badge || '').toLowerCase().trim();
   const bc = BADGE_CONFIG[badgeKey];
-  const badgeHtml = bc
-    ? `<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:${bc.bg};border:1px solid ${bc.border};color:#fff;font-size:9px;font-family:'Unbounded',sans-serif;font-weight:600;padding:2px 5px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.4)">${bc.label}</div>`
-    : '';
+
+  if (bc) {
+    // Бейдж рендерим СНИЗУ через отдельный блок, маркер сверху
+    // iconAnchor указывает на кончик маркера (нижний центр всего блока)
+    // Структура сверху вниз: [бейдж 20px gap 4px маркер 28px] = 52px total
+    return L.divIcon({
+      html: `
+        <div style="position:relative;width:80px;height:52px;margin-left:-26px">
+          <div style="
+            position:absolute;
+            bottom:32px;
+            left:50%;
+            transform:translateX(-50%);
+            background:${bc.bg};
+            border:1px solid ${bc.border};
+            color:#fff;
+            font-size:9px;
+            font-family:'Unbounded',sans-serif;
+            font-weight:600;
+            padding:2px 6px;
+            border-radius:4px;
+            white-space:nowrap;
+            box-shadow:0 2px 6px rgba(0,0,0,0.5);
+            z-index:9999;
+            pointer-events:none;
+          ">${bc.label}</div>
+          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%)">
+            <div class="custom-marker" style="background:${color}"><div class="dot"></div></div>
+          </div>
+        </div>`,
+      iconSize: [80, 52],
+      iconAnchor: [40, 52],
+      popupAnchor: [0, -54],
+      className: '',
+    });
+  }
+
   return L.divIcon({
-    html: `<div style="position:relative;display:inline-block">${badgeHtml}<div class="custom-marker" style="background:${color}"><div class="dot"></div></div></div>`,
-    iconSize: [28, badge ? 48 : 28],
-    iconAnchor: [14, badge ? 48 : 28],
-    popupAnchor: [0, badge ? -50 : -30],
+    html: `<div class="custom-marker" style="background:${color}"><div class="dot"></div></div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -30],
+    className: '',
   });
 }
 
