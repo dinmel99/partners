@@ -555,183 +555,118 @@
   .mobile-toggle { display: none; }
 
   /* ============================================================
-     MOBILE RESPONSIVE
+     MOBILE — DRAWER MENU
      ============================================================ */
+
+  /* Бургер кнопка — только на мобиле */
+  .burger-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 8px;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+  }
+  .burger-btn:hover { border-color: var(--accent); }
+  .burger-btn span {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: all 0.25s;
+  }
+  .burger-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .burger-btn.open span:nth-child(2) { opacity: 0; }
+  .burger-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* Оверлей */
+  .drawer-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+  }
+  .drawer-overlay.open { display: block; }
+
+  /* mobile-toggle скрыт везде кроме мобиле */
+  .mobile-toggle { display: none; }
+
   @media (max-width: 768px) {
 
-    /* Header — скрываем поле ввода, оставляем лого + синхронизацию */
-    .header {
-      padding: 0 12px;
-      height: 50px;
-      gap: 10px;
-    }
+    /* Хедер */
+    .header { padding: 0 12px; height: 52px; gap: 8px; }
     .logo span { display: none; }
     .sheets-input-wrap { display: none; }
     .header-divider { display: none; }
     .counter { font-size: 10px; }
-    .counter strong { font-size: 14px; }
+    .counter strong { font-size: 15px; }
+    #sync-time { display: none !important; }
 
-    /* Main — карта на весь экран, панель как шторка снизу */
-    .main {
-      flex-direction: column;
-      position: relative;
-    }
+    /* Бургер появляется */
+    .burger-btn { display: flex; }
 
-    /* Карта занимает весь экран минус высота шторки */
-    #map {
-      height: 100% !important;
-      width: 100% !important;
-    }
+    /* Карта — весь экран */
+    .main { position: relative; }
+    #map { height: 100% !important; width: 100% !important; }
+    .main > div:last-child { flex: 1; height: 100%; }
 
-    /* Отступ снизу чтобы шторка не перекрывала карту */
-    .main > div:last-child {
-      padding-bottom: 90px;
-    }
-
-    /* Контейнер карты — растягиваем */
-    .main > div:last-child {
-      flex: 1;
-      height: 100%;
-    }
-
-    /* Sidebar — шторка снизу */
+    /* Sidebar — выезжает слева как drawer */
     .sidebar {
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      height: 90px; /* закрытое состояние */
-      border-right: none;
-      border-top: 2px solid var(--border);
-      border-radius: 16px 16px 0 0;
+      top: 52px;
+      left: -320px;
+      width: 300px;
+      height: calc(100vh - 52px);
+      border-right: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0;
       z-index: 1000;
-      transition: height 0.3s ease;
-      overflow: hidden;
-      flex-shrink: 0;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
-    }
-
-    .sidebar.open {
-      height: 80vh;
+      transition: left 0.3s ease;
       overflow-y: auto;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.4);
     }
+    .sidebar.open { left: 0; }
 
-    /* Показываем тоггл только на мобиле */
-    .mobile-toggle { display: flex; }
+    /* Фильтры — вертикально */
+    .filters { padding: 12px; flex-direction: column; gap: 8px; }
+    .filter-label { font-size: 9px; margin-bottom: 2px; }
 
-    /* Ручка шторки */
-    .sidebar::before {
-      content: '';
-      display: block;
-      width: 48px;
-      height: 5px;
-      background: var(--text-muted);
-      border-radius: 3px;
-      margin: 10px auto 4px;
-      flex-shrink: 0;
-      opacity: 0.6;
-    }
+    /* Легенда */
+    .legend { flex-wrap: wrap; padding: 10px 12px; gap: 6px; }
+    .legend-item { font-size: 11px; }
 
-    /* Мобильный тоггл */
-    .mobile-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 4px 16px 6px;
-      cursor: pointer;
-      user-select: none;
-      min-height: 44px;
-    }
+    /* Список */
+    .list { padding: 0 8px 20px; }
 
-    .mobile-toggle-label {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: 0.5px;
-    }
-
-    .mobile-toggle-count {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--accent);
-    }
-
-    .mobile-toggle-arrow {
-      color: var(--text-muted);
-      font-size: 16px;
-      transition: transform 0.3s;
-    }
-
-    .sidebar.open .mobile-toggle-arrow {
-      transform: rotate(180deg);
-    }
-
-    /* Прячем десктопный заголовок списка на мобиле */
-    .list-header { display: none; }
-
-    /* Фильтры — горизонтальный скролл */
-    .filters {
-      padding: 8px 12px;
-      flex-direction: row;
-      overflow-x: auto;
-      gap: 8px;
-      flex-wrap: nowrap;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      border-bottom: 1px solid var(--border);
-    }
-    .filters::-webkit-scrollbar { display: none; }
-
-    .filters > div {
-      flex-shrink: 0;
-      min-width: 140px;
-    }
-
-    .filter-label { display: none; }
-
-    .select-filter, .search-wrap input {
-      font-size: 12px;
-      padding: 6px 10px;
-    }
-
-    /* Легенда — горизонтальный скролл */
-    .legend {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      padding: 8px 12px;
-    }
-    .legend::-webkit-scrollbar { display: none; }
-
-    .legend-item { font-size: 10px; flex-shrink: 0; }
-
-    /* Список поселков */
-    .list { padding: 0 8px 80px; }
-
-    /* Попап — на всю ширину снизу */
-    .leaflet-popup-content-wrapper {
-      width: calc(100vw - 32px) !important;
-      max-width: 400px !important;
-      margin: 0 auto !important;
-    }
-
-    /* Info box — убираем на мобиле */
-    /* Поднимаем атрибуцию Leaflet над шторкой на мобиле */
-  @media (max-width: 768px) {
-    .leaflet-bottom.leaflet-left { bottom: 95px !important; }
-    .leaflet-bottom.leaflet-right { bottom: 95px !important; }
+    /* Атрибуция */
+    .leaflet-bottom.leaflet-left { bottom: 8px !important; }
+    .leaflet-bottom.leaflet-right { bottom: 8px !important; }
     .leaflet-control-attribution { font-size: 9px !important; }
-  }
 
-  .info-box { display: none; }
+    /* Попап */
+    .leaflet-popup-content-wrapper {
+      width: calc(100vw - 40px) !important;
+      max-width: 360px !important;
+    }
 
     /* Кнопка синхронизации — только иконка */
     .sync-btn span { display: none; }
-    #sync-time { display: none !important; }
+
+    /* Info box скрыт */
+    .info-box { display: none; }
+
+    /* Сброс фильтров */
+    .list-header { display: flex; }
   }
 
 
@@ -772,6 +707,9 @@
   <div class="header-divider"></div>
   <div class="counter"><strong id="total-count">0</strong> поселков на карте</div>
 
+  <button class="burger-btn" id="burger-btn" onclick="toggleDrawer()" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
   <div class="header-right">
     <!-- Google Sheets URL input -->
     <div class="sheets-input-wrap">
@@ -861,6 +799,7 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
 
 <script>
 // ============================================================
@@ -1484,9 +1423,24 @@ function showToast(msg, type = '') {
 //  INIT
 // ============================================================
 
-function toggleSidebar() {
+// ============================================================
+//  DRAWER MENU (mobile)
+// ============================================================
+function toggleDrawer() {
   const sidebar = document.querySelector('.sidebar');
-  sidebar.classList.toggle('open');
+  const overlay = document.getElementById('drawer-overlay');
+  const burger = document.getElementById('burger-btn');
+  const isOpen = sidebar.classList.contains('open');
+
+  sidebar.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('open', !isOpen);
+  burger.classList.toggle('open', !isOpen);
+}
+
+function closeDrawer() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('burger-btn').classList.remove('open');
 }
 
 window.addEventListener('DOMContentLoaded', () => {
