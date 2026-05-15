@@ -399,6 +399,22 @@
     text-transform: uppercase;
   }
 
+  .legend-select-all {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 9px;
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .legend-select-all:hover { border-color: var(--accent); color: var(--accent); }
+
   .legend-toggle-arrow {
     color: var(--text-muted);
     font-size: 11px;
@@ -790,7 +806,13 @@
     <div class="legend-wrap" id="legend-wrap">
       <div class="legend-header" onclick="toggleLegend()">
         <span class="legend-header-title">Партнёры</span>
-        <span class="legend-toggle-arrow">▲</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="legend-select-all" id="legend-select-all-btn"
+                  onclick="event.stopPropagation();toggleSelectAll()">
+            Убрать все
+          </button>
+          <span class="legend-toggle-arrow">▲</span>
+        </div>
       </div>
       <div class="legend-body">
         <div class="legend" id="legend"></div>
@@ -1309,6 +1331,7 @@ function updateFilterOptions() {
 }
 
 function renderLegend() {
+  updateSelectAllBtn();
   const legend = document.getElementById('legend');
   // Собираем всех уникальных партнёров из данных
   const partners = [...new Set(allData.map(d => d.partner).filter(Boolean))];
@@ -1578,6 +1601,31 @@ function showToast(msg, type = '') {
 // ============================================================
 //  DRAWER MENU (mobile)
 // ============================================================
+function toggleSelectAll() {
+  // Все партнёры из текущих данных
+  const allPartners = [...new Set(allData.map(d => d.partner).filter(Boolean))];
+  const allActive = allPartners.every(p => activePartners.has(p));
+
+  if (allActive) {
+    // Все активны — убираем все
+    activePartners.clear();
+  } else {
+    // Не все активны — включаем все
+    allPartners.forEach(p => activePartners.add(p));
+  }
+
+  updateSelectAllBtn();
+  applyFilters();
+}
+
+function updateSelectAllBtn() {
+  const btn = document.getElementById('legend-select-all-btn');
+  if (!btn) return;
+  const allPartners = [...new Set(allData.map(d => d.partner).filter(Boolean))];
+  const allActive = allPartners.every(p => activePartners.has(p));
+  btn.textContent = allActive ? 'Убрать все' : 'Выбрать все';
+}
+
 function toggleLegend() {
   const wrap = document.getElementById('legend-wrap');
   if (wrap) wrap.classList.toggle('legend-collapsed');
